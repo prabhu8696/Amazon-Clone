@@ -1,9 +1,9 @@
 from django.http import HttpResponse
-from django.shortcuts import render,redirect
+from django.shortcuts import render, redirect
 from accounts.models import Account
 from carts.models import Cart, CartItem
 from .forms import RegistrationForm
-from django.contrib import messages,auth
+from django.contrib import messages, auth
 from django.contrib.auth.decorators import login_required
 
 # verification Email
@@ -18,42 +18,44 @@ import requests
 
 from carts.views import _cart_id
 
+
 def registration(request):
     if request.method == "POST":
         form = RegistrationForm(request.POST)
         if form.is_valid():
-            print('valid')
-            first_name   = form.cleaned_data['first_name']
-            last_name    = form.cleaned_data['last_name']
-            email        = form.cleaned_data['email']
+            first_name = form.cleaned_data['first_name']
+            last_name = form.cleaned_data['last_name']
+            email = form.cleaned_data['email']
             phone_number = form.cleaned_data['phone_number']
-            password     = form.cleaned_data['password']
-            username     = email.split("@")[0]
-            user = Account.objects.create_user(first_name=first_name, last_name=last_name, username=username, email=email, password=password)
+            password = form.cleaned_data['password']
+            username = email.split("@")[0]
+            user = Account.objects.create_user(
+                first_name=first_name, last_name=last_name, username=username, email=email, password=password)
             user.phone_number = phone_number
             user.save()
 
             current_site = get_current_site(request)
             mail_subject = 'Please activate your account'
-            message = render_to_string('account/account_verification_email.html',{
-                'user'   : user,
-                'domain' : current_site,
-                'uid'    : urlsafe_base64_encode(force_bytes(user.pk)),
-                'token'  : default_token_generator.make_token(user),
+            message = render_to_string('account/account_verification_email.html', {
+                'user': user,
+                'domain': current_site,
+                'uid': urlsafe_base64_encode(force_bytes(user.pk)),
+                'token': default_token_generator.make_token(user),
             })
-            to_email   = email
+            to_email = email
             send_email = EmailMessage(mail_subject, message, to=[to_email])
             send_email.send()
-            
+
             # messages.success(request, "Thank you for registering with us, we have sent you a verification email to your email address [pthuletiya@gmail.com], Please verify it.")
             return redirect('/accounts/login/?command=verification&email='+email)
-        
+
     else:
         form = RegistrationForm()
     context = {
-        'form' : form
+        'form': form
     }
-    return render(request, 'account/registration.html',context)
+    return render(request, 'account/registration.html', context)
+
 
 def login(request):
     if request.method == "POST":
@@ -64,10 +66,12 @@ def login(request):
         if user is not None:
             try:
                 cart = Cart.objects.get(cart_id=_cart_id(request))
-                is_cart_item_exists = CartItem.objects.filter(cart=cart).exists()
+                is_cart_item_exists = CartItem.objects.filter(
+                    cart=cart).exists()
 
                 if is_cart_item_exists:
                     cart_item = CartItem.objects.filter(cart=cart)
+
                     product_variation = []
                     for item in cart_item:
                         variation = item.variations.all()
@@ -78,11 +82,12 @@ def login(request):
                     id = []
                     for item in cart_item:
                         existing_variation = item.variations.all()
-                        existing_variation_list.append(list(existing_variation))
+                        existing_variation_list.append(
+                            list(existing_variation))
                         id.append(item.id)
 
                     for pr in product_variation:
-                        if pr in existing_variation:
+                        if pr in existing_variation_list:
                             index = existing_variation_list.index(pr)
                             item_id = id[index]
                             item = CartItem.objects.get(id=item_id)
@@ -93,12 +98,12 @@ def login(request):
                             cart_item = CartItem.objects.filter(cart=cart)
                             for item in cart_item:
                                 item.user = user
-                                item.save()                    
+                                item.save()
             except:
                 pass
-            
+
             auth.login(request, user)
-            messages.success(request,'You are logged in')
+            messages.success(request, 'You are logged in')
             url = request.META.get('HTTP_REFERER')
             try:
                 query = requests.utils.urlparse(url).query
@@ -113,20 +118,22 @@ def login(request):
         else:
             messages.error(request, "Invalid login")
             return redirect('login')
-                
+
     return render(request, 'account/login.html')
 
-@login_required(login_url = 'login')
+
+@login_required(login_url='login')
 def logout(request):
     auth.logout(request)
     messages.success(request, "Your are logout")
     return redirect('login')
 
+
 def activate(request, uidb64, token):
     try:
         uid = urlsafe_base64_decode(uidb64).decode()
         user = Account._default_manager.get(pk=uid)
-    except(TypeError, ValueError, OverflowError, Account.DoesNotExist):
+    except (TypeError, ValueError, OverflowError, Account.DoesNotExist):
         user = None
 
     if user is not None and default_token_generator.check_token(user, token):
@@ -138,9 +145,11 @@ def activate(request, uidb64, token):
         messages.error(request, 'Invalid activation link')
         return redirect('register')
 
+
 @login_required(login_url='login')
 def dashboard(request):
     return render(request, 'account/dashboard.html')
+
 
 def forgotpassword(request):
     if request.method == 'POST':
@@ -151,40 +160,43 @@ def forgotpassword(request):
             # reset password email
             current_site = get_current_site(request)
             mail_subject = 'Reset your password'
-            message = render_to_string('account/reset_password_email.html',{
-                'user'   : user,
-                'domain' : current_site,
-                'uid'    : urlsafe_base64_encode(force_bytes(user.pk)),
-                'token'  : default_token_generator.make_token(user),
+            message = render_to_string('account/reset_password_email.html', {
+                'user': user,
+                'domain': current_site,
+                'uid': urlsafe_base64_encode(force_bytes(user.pk)),
+                'token': default_token_generator.make_token(user),
             })
-            to_email   = email
+            to_email = email
             send_email = EmailMessage(mail_subject, message, to=[to_email])
             send_email.send()
 
-            messages.success(request,'Password reset email has been sent to your email address')
+            messages.success(
+                request, 'Password reset email has been sent to your email address')
             return redirect('login')
-        
+
         else:
-            messages.error(request,'Account does not exist!')
+            messages.error(request, 'Account does not exist!')
             return redirect('forgotpassword')
     return render(request, 'account/forgotpassword.html')
 
+
 def resetpassword_validate(request, uidb64, token):
     try:
-        uid  = urlsafe_base64_decode(uidb64).decode()
+        uid = urlsafe_base64_decode(uidb64).decode()
         user = Account._default_manager.get(pk=uid)
-    except(TypeError, ValueError, OverflowError, Account.DoesNotExist):
+    except (TypeError, ValueError, OverflowError, Account.DoesNotExist):
         user = None
-    
-    if user is not None and default_token_generator.check_token(user, token):    
+
+    if user is not None and default_token_generator.check_token(user, token):
         request.session['uid'] = uid
-        messages.success(request, 'Please reset your password')   
+        messages.success(request, 'Please reset your password')
         return redirect('resetpassword')
-    
+
     else:
         messages.error(request, 'This link has been expired')
         return redirect('login')
-    
+
+
 def resetpassword(request):
     if request.method == "POST":
         password = request.POST['password']
@@ -196,11 +208,11 @@ def resetpassword(request):
             user.set_password(password)
             user.save()
 
-            messages.success(request,'Password reset successful')
+            messages.success(request, 'Password reset successful')
             return redirect('login')
-        
+
         else:
-            messages.error(request,'Password does not match')
+            messages.error(request, 'Password does not match')
             return redirect('resetpassword')
     else:
         return render(request, 'account/resetpassword.html')
