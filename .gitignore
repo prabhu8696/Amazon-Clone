@@ -5,6 +5,9 @@
 /myproject/tmp/
 /myproject/media/
 
+# env
+.env
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
