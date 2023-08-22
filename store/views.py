@@ -8,6 +8,7 @@ from . models import Product, ProductGallery, ReviewRating
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Q
 from django.contrib import messages
+from django.db.models import Avg,Min,Max,Sum
 # Create your views here.
 
 # Store ----------------------------------------------------------------------------------------------
@@ -18,10 +19,8 @@ def store(request, category_slug=None):
     products = None
 
     if category_slug != None:
-        categories = get_object_or_404(
-            Category, slug=category_slug).order_by('id')
-        products = Product.objects.filter(
-            category=categories, is_available=True)
+        categories = get_object_or_404(Category, slug=category_slug)
+        products = Product.objects.filter(category=categories, is_available=True).order_by('id')
         paginator = Paginator(products, 1)
         page = request.GET.get('page')
         paged_products = paginator.get_page(page)
@@ -113,3 +112,14 @@ def submit_review(request, product_id):
                 data.save()
                 messages.success(request, 'Thak you, Your review has been Submited!')
                 return redirect(url)
+            
+# ----------------------------------------------------------------------------------------------------
+
+# def price_filter(request):
+#     if request.method == 'GET':
+#         minimum = request.GET.get('min')
+#         print(minimum)
+#         maximum = request.GET.get('max')
+#         result = Product.objects.filter(price__range=(minimum,maximum))
+#         print (result)
+#         return redirect('store')
